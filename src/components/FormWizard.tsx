@@ -174,7 +174,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
     <div style={cssVars} className="fw-root">
       <style>{`
         .fw-root{background:var(--c-lt);min-height:100vh}
-        .fw-hero{background:linear-gradient(135deg,var(--c) 0%,var(--c-dk) 100%);color:#fff;padding:36px 24px 32px}
+        .fw-hero{background:linear-gradient(135deg,var(--c) 0%,var(--c-dk) 100%);color:#fff;padding:36px 24px 32px;text-align:center}
         .fw-tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:11px;font-weight:700;letter-spacing:.12em;padding:3px 12px;border-radius:20px;margin-bottom:12px;text-transform:uppercase}
         .fw-hero h1{font-size:clamp(18px,4vw,26px);font-weight:900;line-height:1.3;margin-bottom:8px;white-space:pre-line}
         .fw-hero-sub{font-size:13px;opacity:.88;line-height:1.7}
