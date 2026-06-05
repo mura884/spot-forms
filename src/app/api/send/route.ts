@@ -4,10 +4,7 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const ADMIN_EMAIL = 'info@spot-s.jp'
-
-// ドメイン認証なしで動作確認できるFromアドレス
-// 独自ドメイン認証後は 'noreply@spot-s.or.jp' に変更する
-const FROM_EMAIL = 'onboarding@resend.dev'
+const FROM_EMAIL  = 'info@spot-s.jp'
 
 export async function POST(req: NextRequest) {
   try {
