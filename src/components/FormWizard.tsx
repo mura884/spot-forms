@@ -257,7 +257,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-btn-s{background:#fff;color:#64748b;border:1.5px solid #dce3ea}
         .fw-btn-s:hover{background:#f8fafc}
         .fw-success{background:#fff;border-radius:10px;padding:48px 28px;text-align:center;border:2px solid var(--c-mid)}
-        .fw-success-icon{width:64px;height:64px;border-radius:50%;background:var(--c-lt);border:2px solid var(--c);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:30px;font-weight:900;color:var(--c)}
+        .fw-success-img{display:block;margin:0 auto 16px;max-width:160px;width:100%;height:auto}
         .fw-success h2{font-size:20px;font-weight:800;color:var(--c-dk);margin-bottom:10px}
         .fw-success p{font-size:14px;color:#64748b;line-height:1.8}
         .fw-success a{color:var(--c)}
@@ -368,7 +368,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {step === 3 && (
           <div className="fw-pane">
             <div className="fw-success">
-              <div className="fw-success-icon">完了</div>
+              <img src="/spot-thanks.png" alt="" className="fw-success-img" />
               <h2>お申し込みを受け付けました</h2>
               <p>
                 ご入力のメールアドレスへ確認メールをお送りしました。<br />
