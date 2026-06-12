@@ -257,7 +257,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-btn-s{background:#fff;color:#64748b;border:1.5px solid #dce3ea}
         .fw-btn-s:hover{background:#f8fafc}
         .fw-success{background:#fff;border-radius:10px;padding:48px 28px;text-align:center;border:2px solid var(--c-mid)}
-        .fw-success-img{display:block;margin:0 auto 16px;max-width:160px;width:100%;height:auto}
+        .fw-success-img{display:block;margin:0 auto 16px;max-width:64px;width:100%;height:auto}
         .fw-success h2{font-size:20px;font-weight:800;color:var(--c-dk);margin-bottom:10px}
         .fw-success p{font-size:14px;color:#64748b;line-height:1.8}
         .fw-success a{color:var(--c)}
