@@ -35,14 +35,17 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   // 親ページ（WordPress）に高さを通知し、iframeをコンテンツに合わせて自動リサイズする
   useEffect(() => {
     const sendHeight = () => {
-      const h = rootRef.current?.scrollHeight
+      if (!rootRef.current) return
+      const h = Math.ceil(rootRef.current.getBoundingClientRect().height)
       if (h) window.parent.postMessage({ type: 'spot-form-resize', height: h }, '*')
     }
-    sendHeight()
-    const ro = new ResizeObserver(sendHeight)
+    // レイアウト確定後に送るため次フレームで実行
+    const raf = requestAnimationFrame(sendHeight)
+    const ro = new ResizeObserver(() => requestAnimationFrame(sendHeight))
     if (rootRef.current) ro.observe(rootRef.current)
     window.addEventListener('resize', sendHeight)
     return () => {
+      cancelAnimationFrame(raf)
       ro.disconnect()
       window.removeEventListener('resize', sendHeight)
     }
@@ -244,7 +247,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-st.done .fw-st-num{border-color:var(--c-dk);background:var(--c-dk);color:#fff}
         .fw-st-line{flex:1;height:2px;background:#e2e8f0;max-width:48px}
         .fw-st-line.done{background:var(--c-dk)}
-        .fw-wrap{max-width:660px;margin:0 auto;padding:28px 16px 80px}
+        .fw-wrap{max-width:660px;margin:0 auto;padding:28px 16px 32px}
         .fw-card{background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,.07);padding:24px;margin-bottom:14px;border:1px solid color-mix(in srgb,var(--c) 12%,transparent)}
         .fw-sec-title{font-size:13px;font-weight:800;color:var(--c-dk);display:flex;align-items:center;gap:8px;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--c-lt)}
         .fw-sec-title::before{content:'';display:inline-block;width:4px;height:15px;background:var(--c);border-radius:2px;flex-shrink:0}
