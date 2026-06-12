@@ -9,7 +9,9 @@ const config: FormConfig = {
   subject: '【スポット社労士くん】助成金についての無料相談 お申し込みがありました',
   autoResp: `このたびは「助成金についての無料相談」にお申し込みいただき、誠にありがとうございます。
 
-担当者より2営業日以内にご連絡いたします。
+担当者より3営業日以内にご連絡いたします。
+
+なお、助成金に関するご相談・申請は提携の社会保険労務士が対応いたします。
 
 ━━━━━━━━━━━━━━━━━━━━━
 スポット社労士くん
@@ -20,13 +22,14 @@ https://spot-s.or.jp/
     {
       title: '貴社情報',
       fields: [
-        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true },
+        { type: 'note', text: '※ 助成金に関連するご相談・お申し込みは、提携の社会保険労務士による対応となります。' },
+        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true, autoComplete: 'organization' },
         { type: 'col2', fields: [
-          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true },
-          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true },
+          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true, autoComplete: 'family-name' },
+          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true, autoComplete: 'given-name' },
         ]},
-        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true },
-        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000' },
+        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true, autoComplete: 'email' },
+        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000', autoComplete: 'tel' },
         { type: 'radio', id: 'emp', label: '従業員数', required: true,
           options: ['1〜4名', '5〜9名', '10〜29名', '30〜99名', '100名以上'] },
         { type: 'select', id: '業種', label: '業種',
@@ -40,7 +43,7 @@ https://spot-s.or.jp/
           note: '具体的な助成金名が分からなくてもOKです。現在の状況をご記入ください。',
           placeholder: '例：採用したので使える助成金を確認したい / キャリアアップ助成金について知りたい　など' },
         { type: 'checkbox', id: '関心のある助成金', label: '関心のある助成金・状況',
-          options: ['採用・雇用に関する助成金', 'キャリアアップ助成金', '働き方改革関連の助成金', '育児・介護に関する助成金', '人材育成・教育訓練', 'どれが使えるか分からない'] },
+          options: ['キャリアアップ助成金', '育休・産休に関する助成金'] },
         { type: 'radio', id: '申請経験', label: '助成金の申請経験',
           options: ['初めて', '過去に申請したことがある', '現在申請中'] },
         { type: 'radio', id: 'contact', label: 'ご希望の連絡方法', required: true,

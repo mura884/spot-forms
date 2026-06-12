@@ -9,7 +9,7 @@ const config: FormConfig = {
   subject: '【スポット社労士くん】給与計算についての無料相談 お申し込みがありました',
   autoResp: `このたびは「給与計算についての無料相談」にお申し込みいただき、誠にありがとうございます。
 
-担当者より2営業日以内にご連絡いたします。
+担当者より3営業日以内にご連絡いたします。
 
 ━━━━━━━━━━━━━━━━━━━━━
 スポット社労士くん
@@ -20,13 +20,13 @@ https://spot-s.or.jp/
     {
       title: '貴社情報',
       fields: [
-        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true },
+        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true, autoComplete: 'organization' },
         { type: 'col2', fields: [
-          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true },
-          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true },
+          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true, autoComplete: 'family-name' },
+          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true, autoComplete: 'given-name' },
         ]},
-        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true },
-        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000' },
+        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true, autoComplete: 'email' },
+        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000', autoComplete: 'tel' },
         { type: 'radio', id: 'emp', label: '給与計算対象の従業員数', required: true,
           options: ['1〜4名', '5〜9名', '10〜29名', '30〜99名', '100名以上'] },
         { type: 'radio', id: '現在の給与計算方法', label: '現在の給与計算方法',
@@ -39,8 +39,6 @@ https://spot-s.or.jp/
         { type: 'textarea', id: 'message', label: 'お困りのこと・ご相談内容',
           note: '現在の状況や課題を教えていただけると、より的確なご提案ができます。',
           placeholder: '例：月次の給与計算をすべてお任せしたい / 残業代計算が複雑　など' },
-        { type: 'checkbox', id: 'お困りの点', label: '特にお困りの点',
-          options: ['月次の給与計算業務', '残業代・割増賃金の計算', '社会保険料の控除計算', '賞与計算', '年末調整', '給与明細の発行'] },
         { type: 'radio', id: 'contact', label: 'ご希望の連絡方法', required: true,
           options: ['メール', '電話', 'どちらでも'] },
         { type: 'select', id: 'howFound', label: 'このサイトをお知りになったきっかけ',

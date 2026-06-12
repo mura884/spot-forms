@@ -1,13 +1,14 @@
 'use client'
-import { useState, CSSProperties } from 'react'
+import { useState, useRef, CSSProperties } from 'react'
 
 export type FieldDef =
-  | { type: 'text' | 'email' | 'tel'; id: string; label: string; placeholder?: string; required?: boolean }
+  | { type: 'text' | 'email' | 'tel'; id: string; label: string; placeholder?: string; required?: boolean; autoComplete?: string }
   | { type: 'textarea'; id: string; label: string; placeholder?: string; required?: boolean; note?: string }
   | { type: 'radio'; id: string; label: string; options: string[]; required?: boolean }
   | { type: 'checkbox'; id: string; label: string; options: string[] }
   | { type: 'select'; id: string; label: string; options: string[]; required?: boolean }
   | { type: 'col2'; fields: FieldDef[] }
+  | { type: 'note'; text: string }
 
 export interface FormConfig {
   color: string; colorDk: string; colorLt: string; colorMid: string
@@ -16,7 +17,7 @@ export interface FormConfig {
   sections: { title: string; fields: FieldDef[] }[]
 }
 
-const EXTRA_KEYS = ['現在の状況','気になっていること','現在の給与計算方法','お困りの点','業種','関心のある助成金','申請経験']
+const EXTRA_KEYS = ['現在の状況','気になっていること','現在の給与計算方法','業種','関心のある助成金','申請経験']
 
 export default function FormWizard({ config }: { config: FormConfig }) {
   const { color, colorDk, colorLt, colorMid } = config
@@ -26,6 +27,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   const [agree, setAgree] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendErr, setSendErr] = useState(false)
+  const topRef = useRef<HTMLDivElement>(null)
 
   const cssVars = { ['--c' as string]: color, ['--c-dk' as string]: colorDk, ['--c-lt' as string]: colorLt, ['--c-mid' as string]: colorMid } as CSSProperties
 
@@ -53,7 +55,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   const validate = () => {
     const errs: Record<string, boolean> = {}
     getAllFields().forEach(f => {
-      if (f.type === 'col2' || !('required' in f) || !f.required) return
+      if (f.type === 'col2' || f.type === 'note' || !('required' in f) || !f.required) return
       const v = values[f.id]
       if (!v || (typeof v === 'string' && !v.trim())) errs[f.id] = true
       if (f.type === 'email' && typeof v === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) errs[f.id] = true
@@ -63,9 +65,15 @@ export default function FormWizard({ config }: { config: FormConfig }) {
     return Object.keys(errs).length === 0
   }
 
+  // ヘッダー位置にスクロールするヘルパー
+  const scrollToTop = () => {
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const goConfirm = () => {
-    if (!validate()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return }
-    setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!validate()) { scrollToTop(); return }
+    setStep(2)
+    scrollToTop()
   }
 
   const doSubmit = async () => {
@@ -86,19 +94,25 @@ export default function FormWizard({ config }: { config: FormConfig }) {
           subject: config.subject, autoResponse: config.autoResp, extra: extraLines,
         }),
       })
-      if (res.ok) { setStep(3); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+      if (res.ok) { setStep(3); scrollToTop() }
       else setSendErr(true)
     } catch { setSendErr(true) }
     finally { setSending(false) }
   }
 
   const renderField = (f: FieldDef, key?: string): React.ReactNode => {
-    const k = key || ('id' in f ? f.id : 'col2')
+    const k = key || ('id' in f ? f.id : 'field')
+
     if (f.type === 'col2') return (
       <div key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {f.fields.map((ff, i) => renderField(ff, `col2-${i}`))}
       </div>
     )
+
+    if (f.type === 'note') return (
+      <div key={k} className="fw-note-box">{f.text}</div>
+    )
+
     const hasErr = errors[f.id]
     const label = (
       <div className="fw-label">
@@ -106,23 +120,31 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {'required' in f && f.required ? <span className="fw-req">必須</span> : <span className="fw-opt">任意</span>}
       </div>
     )
+
     if (f.type === 'text' || f.type === 'email' || f.type === 'tel') return (
       <div key={f.id} className="fw-field">
         {label}
-        <input type={f.type} value={getStr(f.id)} placeholder={f.placeholder}
+        <input
+          type={f.type}
+          value={getStr(f.id)}
+          placeholder={f.placeholder}
+          name={f.id}
+          autoComplete={f.autoComplete || f.id}
           onChange={e => { setVal(f.id, e.target.value); setErrors(er => ({ ...er, [f.id]: false })) }}
           className={`fw-input${hasErr ? ' err' : ''}`} />
         {hasErr && <div className="fw-errmsg">入力してください</div>}
       </div>
     )
+
     if (f.type === 'textarea') return (
       <div key={f.id} className="fw-field">
         {label}
         {'note' in f && f.note && <div className="fw-note">{f.note}</div>}
-        <textarea value={getStr(f.id)} placeholder={f.placeholder} rows={5}
+        <textarea value={getStr(f.id)} placeholder={f.placeholder} rows={5} name={f.id}
           onChange={e => setVal(f.id, e.target.value)} className="fw-input fw-ta" />
       </div>
     )
+
     if (f.type === 'radio') return (
       <div key={f.id} className="fw-field">
         {label}
@@ -137,6 +159,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {hasErr && <div className="fw-errmsg">選択してください</div>}
       </div>
     )
+
     if (f.type === 'checkbox') return (
       <div key={f.id} className="fw-field">
         {label}
@@ -145,17 +168,18 @@ export default function FormWizard({ config }: { config: FormConfig }) {
             const checked = getArr(f.id).includes(opt)
             return (
               <label key={opt} className={`fw-choice${checked ? ' sel' : ''}`} onClick={() => toggleCheck(f.id, opt)}>
-                <span className="fw-square">{checked && <span className="fw-chk">✓</span>}</span>{opt}
+                <span className="fw-square">{checked && <span className="fw-chk">/</span>}</span>{opt}
               </label>
             )
           })}
         </div>
       </div>
     )
+
     if (f.type === 'select') return (
       <div key={f.id} className="fw-field">
         {label}
-        <select value={getStr(f.id)} onChange={e => setVal(f.id, e.target.value)} className="fw-input fw-sel">
+        <select value={getStr(f.id)} onChange={e => setVal(f.id, e.target.value)} className="fw-input fw-sel" name={f.id}>
           <option value="">選択してください</option>
           {f.options.map(o => <option key={o}>{o}</option>)}
         </select>
@@ -173,12 +197,13 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   return (
     <div style={cssVars} className="fw-root">
       <style>{`
+        html, body { overflow-x: hidden; }
         .fw-root{background:var(--c-lt);min-height:100vh}
         .fw-hero{background:linear-gradient(135deg,var(--c) 0%,var(--c-dk) 100%);color:#fff;padding:36px 24px 32px;text-align:center}
-        .fw-tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:11px;font-weight:700;letter-spacing:.12em;padding:3px 12px;border-radius:20px;margin-bottom:12px;text-transform:uppercase}
-        .fw-hero h1{font-size:clamp(18px,4vw,26px);font-weight:900;line-height:1.3;margin-bottom:8px;white-space:pre-line}
-        .fw-hero-sub{font-size:13px;opacity:.88;line-height:1.7}
-        .fw-hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;margin-top:12px}
+        .fw-tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:14px;font-weight:700;letter-spacing:.12em;padding:4px 16px;border-radius:20px;margin-bottom:16px;text-transform:uppercase}
+        .fw-hero h1{font-size:clamp(23px,5.2vw,34px);font-weight:900;line-height:1.3;margin-bottom:10px;white-space:pre-line}
+        .fw-hero-sub{font-size:17px;opacity:.88;line-height:1.7}
+        .fw-hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 18px;font-size:15.5px;font-weight:700;margin-top:14px}
         .fw-stepbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.04)}
         .fw-steps{display:flex;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
         .fw-st{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;font-size:11px;color:#aaa;font-weight:600}
@@ -197,6 +222,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-req{background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px}
         .fw-opt{background:#94a3b8;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px}
         .fw-note{font-size:11px;color:#64748b;margin-bottom:5px}
+        .fw-note-box{background:var(--c-lt);border:1px solid var(--c-mid);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--c-dk);line-height:1.8}
         .fw-input{width:100%;padding:10px 13px;border:1.5px solid #dce3ea;border-radius:7px;font-size:15px;font-family:inherit;color:#1a1a2e;background:#fafbfc;transition:border-color .2s,box-shadow .2s;outline:none;-webkit-appearance:none}
         .fw-input:focus{border-color:var(--c);background:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 16%,transparent)}
         .fw-input.err{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
@@ -213,7 +239,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-dot{width:6px;height:6px;border-radius:50%;background:#fff}
         .fw-square{width:17px;height:17px;border-radius:4px;border:2px solid #cdd5df;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
         .fw-choice.sel .fw-square{border-color:var(--c);background:var(--c)}
-        .fw-chk{font-size:11px;font-weight:900;color:#fff;line-height:1}
+        .fw-chk{font-size:11px;font-weight:900;color:#fff;line-height:1;transform:rotate(20deg)}
         .fw-privacy{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:12px;color:#64748b;line-height:1.8}
         .fw-privacy h4{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:5px}
         .fw-privacy a{color:var(--c)}
@@ -230,9 +256,9 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-btn-p:disabled{background:#94a3b8;box-shadow:none;cursor:not-allowed;transform:none}
         .fw-btn-s{background:#fff;color:#64748b;border:1.5px solid #dce3ea}
         .fw-btn-s:hover{background:#f8fafc}
-        .fw-success{background:#fff;border-radius:10px;padding:48px 28px;text-align:center;border:2px solid #bbf7d0}
-        .fw-success-icon{font-size:52px;margin-bottom:14px;display:block}
-        .fw-success h2{font-size:20px;font-weight:800;color:#15803d;margin-bottom:10px}
+        .fw-success{background:#fff;border-radius:10px;padding:48px 28px;text-align:center;border:2px solid var(--c-mid)}
+        .fw-success-icon{width:64px;height:64px;border-radius:50%;background:var(--c-lt);border:2px solid var(--c);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:30px;font-weight:900;color:var(--c)}
+        .fw-success h2{font-size:20px;font-weight:800;color:var(--c-dk);margin-bottom:10px}
         .fw-success p{font-size:14px;color:#64748b;line-height:1.8}
         .fw-success a{color:var(--c)}
         .fw-err-banner{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:12px 16px;font-size:13px;color:#dc2626;margin-bottom:14px}
@@ -243,11 +269,13 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         @media(max-width:480px){.fw-card{padding:18px 14px}.fw-btn{padding:13px 22px;font-size:14px;min-width:130px}.fw-hero{padding:26px 18px 24px}}
       `}</style>
 
+      <div ref={topRef} />
+
       <header className="fw-hero">
         <span className="fw-tag">{config.tag}</span>
         <h1>{config.title}</h1>
         <p className="fw-hero-sub">{config.subtitle}</p>
-        <div className="fw-hero-badge">✓ 完全無料　|　相談後の押し売りは一切ありません</div>
+        <div className="fw-hero-badge">完全無料　|　相談後の押し売りは一切ありません</div>
       </header>
 
       <div className="fw-stepbar">
@@ -258,7 +286,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
             return (
               <div key={label} style={{ display: 'contents' }}>
                 <div className={`fw-st ${cls}`}>
-                  <div className="fw-st-num">{step > n ? '✓' : n}</div>
+                  <div className="fw-st-num">{step > n ? '済' : n}</div>
                   <div>{label}</div>
                 </div>
                 {i < 2 && <div className={`fw-st-line${step > n ? ' done' : ''}`} />}
@@ -303,7 +331,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
           <div className="fw-pane">
             <div className="fw-card">
               <div className="fw-confirm-box">
-                <strong>📋 入力内容のご確認</strong>
+                <strong>入力内容のご確認</strong>
                 以下の内容でお間違いなければ「送信する」を押してください。修正がある場合は「修正する」で前の画面に戻れます。
               </div>
               <div className="fw-sec-title">貴社情報</div>
@@ -326,7 +354,7 @@ export default function FormWizard({ config }: { config: FormConfig }) {
             </div>
             {sendErr && <div className="fw-err-banner">送信中にエラーが発生しました。しばらくしてから再度お試しください。</div>}
             <div className="fw-btn-row">
-              <button className="fw-btn fw-btn-s" onClick={() => { setStep(1); window.scrollTo({ top: 0 }) }}>← 修正する</button>
+              <button className="fw-btn fw-btn-s" onClick={() => { setStep(1); scrollToTop() }}>← 修正する</button>
               <button className="fw-btn fw-btn-p" onClick={doSubmit} disabled={sending}>
                 {sending ? <><span className="fw-spinner" /> 送信中…</> : '送信する'}
               </button>
@@ -340,12 +368,12 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {step === 3 && (
           <div className="fw-pane">
             <div className="fw-success">
-              <span className="fw-success-icon">✅</span>
+              <div className="fw-success-icon">完了</div>
               <h2>お申し込みを受け付けました</h2>
               <p>
                 ご入力のメールアドレスへ確認メールをお送りしました。<br />
                 迷惑メールフォルダに入っている場合がございますのでご確認ください。<br /><br />
-                担当者より<strong>2営業日以内</strong>にご連絡いたします。<br />
+                担当者より<strong>3営業日以内</strong>にご連絡いたします。<br />
                 ご不明な点は <a href="mailto:info@spot-s.jp">info@spot-s.jp</a> までお問い合わせください。
               </p>
               <p style={{ marginTop: 20 }}>

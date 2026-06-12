@@ -9,7 +9,7 @@ const config: FormConfig = {
   subject: '【スポット社労士くん】はじめてのご相談 お申し込みがありました',
   autoResp: `このたびは「はじめてのご相談」にお申し込みいただき、誠にありがとうございます。
 
-担当者より2営業日以内にご連絡いたします。
+担当者より3営業日以内にご連絡いたします。
 
 ━━━━━━━━━━━━━━━━━━━━━
 スポット社労士くん
@@ -20,13 +20,13 @@ https://spot-s.or.jp/
     {
       title: '貴社情報',
       fields: [
-        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true },
+        { type: 'text', id: 'company', label: '会社名・屋号', placeholder: '例：株式会社〇〇', required: true, autoComplete: 'organization' },
         { type: 'col2', fields: [
-          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true },
-          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true },
+          { type: 'text', id: 'sei', label: '担当者名（姓）', placeholder: '例：田中', required: true, autoComplete: 'family-name' },
+          { type: 'text', id: 'mei', label: '担当者名（名）', placeholder: '例：太郎', required: true, autoComplete: 'given-name' },
         ]},
-        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true },
-        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000' },
+        { type: 'email', id: 'email', label: 'メールアドレス', placeholder: '例：info@example.co.jp', required: true, autoComplete: 'email' },
+        { type: 'tel', id: 'phone', label: '電話番号', placeholder: '例：03-0000-0000', autoComplete: 'tel' },
         { type: 'radio', id: 'emp', label: '従業員数', required: true,
           options: ['1〜4名', '5〜9名', '10〜29名', '30〜99名', '100名以上'] },
       ]
