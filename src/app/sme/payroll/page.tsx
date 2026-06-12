@@ -30,7 +30,9 @@ https://spot-s.or.jp/
         { type: 'radio', id: 'emp', label: '給与計算対象の従業員数', required: true,
           options: ['1〜4名', '5〜9名', '10〜29名', '30〜99名', '100名以上'] },
         { type: 'radio', id: '現在の給与計算方法', label: '現在の給与計算方法',
-          options: ['手計算・Excel', '給与ソフト（自社）', '税理士・会計士に依頼中', '社労士に依頼中', 'まだ決まっていない'] },
+          options: ['手計算・Excel', '給与ソフト', '税理士・会計士に依頼中', '社労士に依頼中', 'まだ決まっていない'] },
+        { type: 'text', id: '給与ソフト名', label: 'ご利用中の給与ソフト名', placeholder: '例：freee人事労務、マネーフォワードクラウド給与　など',
+          required: true, showIf: { fieldId: '現在の給与計算方法', equals: '給与ソフト' } },
       ]
     },
     {

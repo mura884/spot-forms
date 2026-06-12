@@ -1,8 +1,10 @@
 'use client'
-import { useState, useRef, CSSProperties } from 'react'
+import { useState, useRef, useEffect, CSSProperties } from 'react'
+
+export type ShowIf = { fieldId: string; equals: string }
 
 export type FieldDef =
-  | { type: 'text' | 'email' | 'tel'; id: string; label: string; placeholder?: string; required?: boolean; autoComplete?: string }
+  | { type: 'text' | 'email' | 'tel'; id: string; label: string; placeholder?: string; required?: boolean; autoComplete?: string; showIf?: ShowIf }
   | { type: 'textarea'; id: string; label: string; placeholder?: string; required?: boolean; note?: string }
   | { type: 'radio'; id: string; label: string; options: string[]; required?: boolean }
   | { type: 'checkbox'; id: string; label: string; options: string[] }
@@ -17,7 +19,7 @@ export interface FormConfig {
   sections: { title: string; fields: FieldDef[] }[]
 }
 
-const EXTRA_KEYS = ['現在の状況','気になっていること','現在の給与計算方法','業種','関心のある助成金','申請経験']
+const EXTRA_KEYS = ['現在の状況','気になっていること','現在の給与計算方法','給与ソフト名','業種','関心のある助成金','申請経験']
 
 export default function FormWizard({ config }: { config: FormConfig }) {
   const { color, colorDk, colorLt, colorMid } = config
@@ -27,7 +29,25 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   const [agree, setAgree] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendErr, setSendErr] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
+
+  // 親ページ（WordPress）に高さを通知し、iframeをコンテンツに合わせて自動リサイズする
+  useEffect(() => {
+    const sendHeight = () => {
+      const h = rootRef.current?.scrollHeight
+      if (h) window.parent.postMessage({ type: 'spot-form-resize', height: h }, '*')
+    }
+    sendHeight()
+    const ro = new ResizeObserver(sendHeight)
+    if (rootRef.current) ro.observe(rootRef.current)
+    window.addEventListener('resize', sendHeight)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', sendHeight)
+    }
+  }, [step, errors, agree])
+
 
   const cssVars = { ['--c' as string]: color, ['--c-dk' as string]: colorDk, ['--c-lt' as string]: colorLt, ['--c-mid' as string]: colorMid } as CSSProperties
 
@@ -56,6 +76,11 @@ export default function FormWizard({ config }: { config: FormConfig }) {
     const errs: Record<string, boolean> = {}
     getAllFields().forEach(f => {
       if (f.type === 'col2' || f.type === 'note' || !('required' in f) || !f.required) return
+      // showIfが指定されている場合、条件を満たさなければ非表示＝バリデーション対象外
+      if ('showIf' in f && f.showIf) {
+        const depVal = values[f.showIf.fieldId]
+        if (depVal !== f.showIf.equals) return
+      }
       const v = values[f.id]
       if (!v || (typeof v === 'string' && !v.trim())) errs[f.id] = true
       if (f.type === 'email' && typeof v === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) errs[f.id] = true
@@ -102,6 +127,12 @@ export default function FormWizard({ config }: { config: FormConfig }) {
 
   const renderField = (f: FieldDef, key?: string): React.ReactNode => {
     const k = key || ('id' in f ? f.id : 'field')
+
+    // 条件付き表示フィールド：依存先の値が一致しない場合は表示しない
+    if ('showIf' in f && f.showIf) {
+      const depVal = values[f.showIf.fieldId]
+      if (depVal !== f.showIf.equals) return null
+    }
 
     if (f.type === 'col2') return (
       <div key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -195,10 +226,10 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   )
 
   return (
-    <div style={cssVars} className="fw-root">
+    <div ref={rootRef} style={cssVars} className="fw-root">
       <style>{`
-        html, body { overflow-x: hidden; }
-        .fw-root{background:var(--c-lt);min-height:100vh}
+        /* スクロールはブラウザ標準の挙動に従う */
+        .fw-root{background:var(--c-lt)}
         .fw-hero{background:linear-gradient(135deg,var(--c) 0%,var(--c-dk) 100%);color:#fff;padding:36px 24px 32px;text-align:center}
         .fw-tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:14px;font-weight:700;letter-spacing:.12em;padding:4px 16px;border-radius:20px;margin-bottom:16px;text-transform:uppercase}
         .fw-hero h1{font-size:clamp(23px,5.2vw,34px);font-weight:900;line-height:1.3;margin-bottom:10px;white-space:pre-line}
@@ -275,7 +306,6 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         <span className="fw-tag">{config.tag}</span>
         <h1>{config.title}</h1>
         <p className="fw-hero-sub">{config.subtitle}</p>
-        <div className="fw-hero-badge">完全無料　|　相談後の押し売りは一切ありません</div>
       </header>
 
       <div className="fw-stepbar">
