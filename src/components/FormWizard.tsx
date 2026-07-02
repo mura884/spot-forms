@@ -19,7 +19,12 @@ export interface FormConfig {
   sections: { title: string; fields: FieldDef[] }[]
 }
 
-const EXTRA_KEYS = ['現在の状況','気になっていること','現在の給与計算方法','給与ソフト名','業種','関心のある助成金','申請経験']
+const EXTRA_KEYS = [
+  '現在の状況','気になっていること',
+  '現在の給与計算方法','給与ソフト名',
+  '業種','関心のある助成金','申請経験',
+  'service','contact_method','category','category_other','urgency',
+]
 
 export default function FormWizard({ config }: { config: FormConfig }) {
   const { color, colorDk, colorLt, colorMid } = config
@@ -32,27 +37,20 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
-  // 親ページ（WordPress）に高さを通知し、iframeをコンテンツに合わせて自動リサイズする
+  const cssVars = { ['--c' as string]: color, ['--c-dk' as string]: colorDk, ['--c-lt' as string]: colorLt, ['--c-mid' as string]: colorMid } as CSSProperties
+
   useEffect(() => {
     const sendHeight = () => {
       if (!rootRef.current) return
       const h = Math.ceil(rootRef.current.getBoundingClientRect().height)
       if (h) window.parent.postMessage({ type: 'spot-form-resize', height: h }, '*')
     }
-    // レイアウト確定後に送るため次フレームで実行
     const raf = requestAnimationFrame(sendHeight)
     const ro = new ResizeObserver(() => requestAnimationFrame(sendHeight))
     if (rootRef.current) ro.observe(rootRef.current)
     window.addEventListener('resize', sendHeight)
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-      window.removeEventListener('resize', sendHeight)
-    }
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('resize', sendHeight) }
   }, [step, errors, agree])
-
-
-  const cssVars = { ['--c' as string]: color, ['--c-dk' as string]: colorDk, ['--c-lt' as string]: colorLt, ['--c-mid' as string]: colorMid } as CSSProperties
 
   const setVal = (id: string, val: string|string[]) => setValues(v => ({ ...v, [id]: val }))
   const toggleCheck = (id: string, opt: string) => {
@@ -75,15 +73,19 @@ export default function FormWizard({ config }: { config: FormConfig }) {
     return flat
   }
 
+  const isVisible = (f: FieldDef): boolean => {
+    if (!('showIf' in f) || !f.showIf) return true
+    const depVal = values[f.showIf.fieldId]
+    if (Array.isArray(depVal)) return depVal.includes(f.showIf.equals)
+    return depVal === f.showIf.equals
+  }
+
   const validate = () => {
     const errs: Record<string, boolean> = {}
     getAllFields().forEach(f => {
-      if (f.type === 'col2' || f.type === 'note' || !('required' in f) || !f.required) return
-      // showIfが指定されている場合、条件を満たさなければ非表示＝バリデーション対象外
-      if ('showIf' in f && f.showIf) {
-        const depVal = values[f.showIf.fieldId]
-        if (depVal !== f.showIf.equals) return
-      }
+      if (f.type === 'col2' || f.type === 'note') return
+      if (!('required' in f) || !f.required) return
+      if (!isVisible(f)) return
       const v = values[f.id]
       if (!v || (typeof v === 'string' && !v.trim())) errs[f.id] = true
       if (f.type === 'email' && typeof v === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) errs[f.id] = true
@@ -93,15 +95,11 @@ export default function FormWizard({ config }: { config: FormConfig }) {
     return Object.keys(errs).length === 0
   }
 
-  // ヘッダー位置にスクロールするヘルパー
-  const scrollToTop = () => {
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const scrollToTop = () => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   const goConfirm = () => {
     if (!validate()) { scrollToTop(); return }
-    setStep(2)
-    scrollToTop()
+    setStep(2); scrollToTop()
   }
 
   const doSubmit = async () => {
@@ -130,23 +128,13 @@ export default function FormWizard({ config }: { config: FormConfig }) {
 
   const renderField = (f: FieldDef, key?: string): React.ReactNode => {
     const k = key || ('id' in f ? f.id : 'field')
-
-    // 条件付き表示フィールド：依存先の値が一致しない場合は表示しない
-    if ('showIf' in f && f.showIf) {
-      const depVal = values[f.showIf.fieldId]
-      if (depVal !== f.showIf.equals) return null
-    }
-
+    if (!isVisible(f)) return null
     if (f.type === 'col2') return (
       <div key={k} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         {f.fields.map((ff, i) => renderField(ff, `col2-${i}`))}
       </div>
     )
-
-    if (f.type === 'note') return (
-      <div key={k} className="fw-note-box">{f.text}</div>
-    )
-
+    if (f.type === 'note') return <div key={k} className="fw-note-box">{f.text}</div>
     const hasErr = errors[f.id]
     const label = (
       <div className="fw-label">
@@ -154,31 +142,26 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {'required' in f && f.required ? <span className="fw-req">必須</span> : <span className="fw-opt">任意</span>}
       </div>
     )
-
     if (f.type === 'text' || f.type === 'email' || f.type === 'tel') return (
       <div key={f.id} className="fw-field">
         {label}
-        <input
-          type={f.type}
-          value={getStr(f.id)}
-          placeholder={f.placeholder}
-          name={f.id}
+        <input type={f.type} value={getStr(f.id)} placeholder={f.placeholder} name={f.id}
           autoComplete={f.autoComplete || f.id}
           onChange={e => { setVal(f.id, e.target.value); setErrors(er => ({ ...er, [f.id]: false })) }}
           className={`fw-input${hasErr ? ' err' : ''}`} />
         {hasErr && <div className="fw-errmsg">入力してください</div>}
       </div>
     )
-
     if (f.type === 'textarea') return (
       <div key={f.id} className="fw-field">
         {label}
         {'note' in f && f.note && <div className="fw-note">{f.note}</div>}
         <textarea value={getStr(f.id)} placeholder={f.placeholder} rows={5} name={f.id}
-          onChange={e => setVal(f.id, e.target.value)} className="fw-input fw-ta" />
+          onChange={e => { setVal(f.id, e.target.value); setErrors(er => ({ ...er, [f.id]: false })) }}
+          className={`fw-input fw-ta${hasErr ? ' err' : ''}`} />
+        {hasErr && <div className="fw-errmsg">入力してください</div>}
       </div>
     )
-
     if (f.type === 'radio') return (
       <div key={f.id} className="fw-field">
         {label}
@@ -193,11 +176,10 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         {hasErr && <div className="fw-errmsg">選択してください</div>}
       </div>
     )
-
     if (f.type === 'checkbox') return (
       <div key={f.id} className="fw-field">
         {label}
-        <div className="fw-choices">
+        <div className="fw-choices fw-choices-wrap">
           {f.options.map(opt => {
             const checked = getArr(f.id).includes(opt)
             return (
@@ -209,7 +191,6 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         </div>
       </div>
     )
-
     if (f.type === 'select') return (
       <div key={f.id} className="fw-field">
         {label}
@@ -231,13 +212,11 @@ export default function FormWizard({ config }: { config: FormConfig }) {
   return (
     <div ref={rootRef} style={cssVars} className="fw-root">
       <style>{`
-        /* スクロールはブラウザ標準の挙動に従う */
         .fw-root{background:var(--c-lt)}
         .fw-hero{background:linear-gradient(135deg,var(--c) 0%,var(--c-dk) 100%);color:#fff;padding:36px 24px 32px;text-align:center}
         .fw-tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:14px;font-weight:700;letter-spacing:.12em;padding:4px 16px;border-radius:20px;margin-bottom:16px;text-transform:uppercase}
         .fw-hero h1{font-size:clamp(23px,5.2vw,34px);font-weight:900;line-height:1.3;margin-bottom:10px;white-space:pre-line}
         .fw-hero-sub{font-size:17px;opacity:.88;line-height:1.7}
-        .fw-hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 18px;font-size:15.5px;font-weight:700;margin-top:14px}
         .fw-stepbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.04)}
         .fw-steps{display:flex;align-items:center;justify-content:center;max-width:480px;margin:0 auto}
         .fw-st{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;font-size:11px;color:#aaa;font-weight:600}
@@ -260,10 +239,11 @@ export default function FormWizard({ config }: { config: FormConfig }) {
         .fw-input{width:100%;padding:10px 13px;border:1.5px solid #dce3ea;border-radius:7px;font-size:15px;font-family:inherit;color:#1a1a2e;background:#fafbfc;transition:border-color .2s,box-shadow .2s;outline:none;-webkit-appearance:none}
         .fw-input:focus{border-color:var(--c);background:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 16%,transparent)}
         .fw-input.err{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
-        .fw-ta{resize:vertical;min-height:120px}
+        .fw-ta{resize:vertical;min-height:140px}
         .fw-sel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer}
         .fw-errmsg{font-size:11px;color:#ef4444;margin-top:4px}
         .fw-choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+        .fw-choices-wrap .fw-choice{width:100%}
         .fw-choices.err .fw-choice{border-color:#fca5a5}
         .fw-choice{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;padding:8px 14px;border:1.5px solid #dce3ea;border-radius:7px;background:#fafbfc;transition:all .15s;user-select:none}
         .fw-choice:hover{border-color:var(--c-mid);background:var(--c-lt)}
