@@ -7,7 +7,7 @@ export type FieldDef =
   | { type: 'text' | 'email' | 'tel'; id: string; label: string; placeholder?: string; required?: boolean; autoComplete?: string; showIf?: ShowIf }
   | { type: 'textarea'; id: string; label: string; placeholder?: string; required?: boolean; note?: string }
   | { type: 'radio'; id: string; label: string; options: string[]; required?: boolean }
-  | { type: 'checkbox'; id: string; label: string; options: string[] }
+  | { type: 'checkbox'; id: string; label: string; options: string[]; required?: boolean }
   | { type: 'select'; id: string; label: string; options: string[]; required?: boolean }
   | { type: 'col2'; fields: FieldDef[] }
   | { type: 'note'; text: string }
@@ -87,6 +87,10 @@ export default function FormWizard({ config }: { config: FormConfig }) {
       if (!('required' in f) || !f.required) return
       if (!isVisible(f)) return
       const v = values[f.id]
+      if (f.type === 'checkbox') {
+        if (!Array.isArray(v) || v.length === 0) errs[f.id] = true
+        return
+      }
       if (!v || (typeof v === 'string' && !v.trim())) errs[f.id] = true
       if (f.type === 'email' && typeof v === 'string' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) errs[f.id] = true
     })

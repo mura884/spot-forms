@@ -38,7 +38,7 @@ https://spot-s.or.jp/
       title: 'ご相談内容',
       fields: [
         { type: 'note', text: '※ 複数選択できます。「どれか分からない」の場合はその選択肢を選んでください。' },
-        { type: 'checkbox', id: 'service', label: 'ご興味のあるサービス', options: [
+        { type: 'checkbox', id: 'service', label: 'ご興味のあるサービス', required: true, options: [
           '給与計算サポート・アウトソーシング',
           '社会保険・労働保険の手続き代行',
           '顧問契約（手続き代行＋労務相談）',
